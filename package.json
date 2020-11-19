@@ -1,0 +1,16 @@
+{
+  "name": "rpi-camera-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "test",
+    "start": "node server.js"
+  },
+  "author": "jm",
+  "license": "MIT",
+  "dependencies": {
+    "raspivid-stream": "^0.2.1",
+    "websocket": "^1.0.32"
+  }
+}
