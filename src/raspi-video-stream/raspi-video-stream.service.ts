@@ -19,16 +19,6 @@ export class RaspiVideoStreamService {
     profile: 'baseline'
   };
   
-  constructor() {
-    // TODO: remove
-    const obs = this.getCapture();
-    obs.subscribe(data => {
-      this.logger.log(data.toString());
-    }, error => {
-      this.logger.error(error);
-    });
-  }
-  
   getCapture(): Observable<string> {
     if (this.isCapturing()) {
       return this.capSubject;
