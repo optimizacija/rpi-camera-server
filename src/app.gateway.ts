@@ -30,12 +30,12 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   
   handleConnection(socket: Socket, ...args: any[]): any {
     this.logger.log(`connected ${socket.id}`);
-    const observable = this.videoStreamService.getCapture()
+    const subscription = this.videoStreamService.getCapture()
       .subscribe(
         data => socket.emit('video-chunk', data),
         error => socket.emit('video-error', '')
       );
-    this.connections.push({ socket, observable });
+    this.connections.push({ socket, subscription });
     this.logger.log(this.connections);
   }
   
@@ -46,7 +46,7 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     if (found !== -1) {
       this.logger.log('cleaning up');
       const connection = this.connections[found];
-      connection.observable.unsubscribe();
+      connection.subscription.unsubscribe();
       this.connections = this.connections.splice(found, 1);
       // TODO: unsubscribe from capture
       // TODO: check if socket needs to be closed
