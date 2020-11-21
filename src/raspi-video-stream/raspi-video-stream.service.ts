@@ -55,11 +55,11 @@ export class RaspiVideoStreamService {
     this.capSubject = new Subject<string>(); // TODO: change type to buffer?
     // raspivid --width 960 --height 540 --profile 'baseline' --timeout 0 -o -
     this.capProcess = spawn(this.command, [
-      `--width ${this.config.width}`,
-      `--height ${this.config.height}`,
-      `--profile ${this.config.profile}`,
-      '--timeout 0',
-      '-o -',
+      '--width', '${this.config.width}',
+      '--height', '${this.config.height}',
+      '--profile', '${this.config.profile}',
+      '--timeout', '0',
+      '-o', '-',
     ]);
   }
   
