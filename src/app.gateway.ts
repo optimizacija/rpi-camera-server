@@ -36,13 +36,15 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
         error => socket.emit('video-error', '')
       );
     this.connections.push({ socket, observable });
+    this.logger.log(this.connections);
   }
   
   handleDisconnect(socket: Socket): any {
-    socket.disconnect(true);
+    // socket.disconnect(true); // TODO: required?
     this.logger.log(`disconnected ${socket.id}`);
     const found = this.connections.find(c => c.socket.id === socket.id);
-    if (found) {
+    if (found !== -1) {
+      this.logger.log('cleaning up');
       const connection = this.connections[found];
       connection.observable.unsubscribe();
       this.connections = this.connections.splice(found, 1);
