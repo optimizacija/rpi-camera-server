@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { spawn, ChildProcess } from 'child_process';
 import { Observable, Subject } from 'rxjs';
+import { RaspiVideoStreamConfig } from './raspi-video-stream-config.model';
 
 @Injectable()
 export class RaspiVideoStreamService {
@@ -10,6 +11,13 @@ export class RaspiVideoStreamService {
   
   private capProcess: ChildProcess;
   private capSubject: Subject<string>;
+  
+  // TODO: support live reload, read from file etc
+  private config: RaspiVideoStreamConfig = {
+    width: 960, // px
+    height: 540, // px
+    profile: 'baseline'
+  };
   
   constructor() {
     // TODO: remove
@@ -45,7 +53,14 @@ export class RaspiVideoStreamService {
   
   private _initState() {
     this.capSubject = new Subject<string>(); // TODO: change type to buffer?
-    this.capProcess = spawn('ls', ['-lh', '/usr']);  // TODO: change process
+    // raspivid --width 960 --height 540 --profile 'baseline' --timeout 0 -o -
+    this.capProcess = spawn(this.command, [
+      `--width ${this.config.width}`,
+      `--height ${this.config.height}`,
+      `--profile ${this.config.profile}`,
+      '--timeout 0',
+      '-o -',
+    ]);
   }
   
   private _setupEvents() {
