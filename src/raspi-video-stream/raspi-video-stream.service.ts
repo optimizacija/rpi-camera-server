@@ -45,7 +45,7 @@ export class RaspiVideoStreamService {
   
   private _initState() {
     this.capSubject = new Subject<string>(); // TODO: change type to buffer?
-    this.capProcess = spawn('sls', ['-lh', '/usr']);  // TODO: change process
+    this.capProcess = spawn('ls', ['-lh', '/usr']);  // TODO: change process
   }
   
   private _setupEvents() {
@@ -54,16 +54,17 @@ export class RaspiVideoStreamService {
       this.capSubject.next(data);
     });
     
-    // closing, exiting & killing process
+    // closing & exiting
     this.capProcess.on('close', code => {
+      const message = `${this.command} closed all stdio with code ${code}`
       if (code == 0) {
         if (this.isCapturing()) {
-          this.logger.warn(`${this.command} close all stdio with code ${code} before exiting`);
+          this.logger.warn(`${message} before exiting`);
         } else {
-          this.logger.log(`${this.command} close all stdio with code ${code}`);
+          this.logger.log(message);
         }
       } else {
-        this.logger.error(`${this.command} close all stdio with code ${code}`);
+        this.logger.error(message);
       }
     });
     
@@ -81,7 +82,7 @@ export class RaspiVideoStreamService {
     });
     
     this.capProcess.stderr.on('data', data => {
-      this.logger.warn(`Received output on stderr: ${data}`);
+      this.logger.warn(`Received data on stderr: ${data}`);
     });
   }
   
