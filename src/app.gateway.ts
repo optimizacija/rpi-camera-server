@@ -45,10 +45,8 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     if (found !== -1) {
       this.logger.log('cleaning up');
       const connection = this.connections[found];
-      connection.subscription.unsubscribe();
+      connection.subscription.unsubscribe(); // TODO kill capture when no subscriptions are active
       this.connections = this.connections.splice(found, 1);
-      // TODO: unsubscribe from capture
-      // TODO: check if socket needs to be closed
     }
   }
 }
