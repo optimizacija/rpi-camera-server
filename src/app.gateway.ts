@@ -30,24 +30,23 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   
   handleConnection(socket: Socket, ...args: any[]): any {
     this.logger.log(`connected ${socket.id}`);
-    const observable = this.videoStreamService.getCapture()
+    const subscription = this.videoStreamService.getCapture()
       .subscribe(
         data => socket.emit('video-chunk', data),
         error => socket.emit('video-error', '')
       );
-    this.connections.push({ socket, observable });
+    this.connections.push({ socket, subscription });
   }
   
   handleDisconnect(socket: Socket): any {
-    socket.disconnect(true);
+    // socket.disconnect(true); // TODO: required?
     this.logger.log(`disconnected ${socket.id}`);
-    const found = this.connections.find(c => c.socket.id === socket.id);
-    if (found) {
+    const found = this.connections.findIndex(c => c.socket.id === socket.id);
+    if (found !== -1) {
+      this.logger.log('cleaning up');
       const connection = this.connections[found];
-      connection.observable.unsubscribe();
+      connection.subscription.unsubscribe(); // TODO kill capture when no subscriptions are active
       this.connections = this.connections.splice(found, 1);
-      // TODO: unsubscribe from capture
-      // TODO: check if socket needs to be closed
     }
   }
 }
