@@ -41,10 +41,9 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   handleDisconnect(socket: Socket): any {
     // socket.disconnect(true); // TODO: required?
     this.logger.log(`disconnected ${socket.id}`);
-    const found = this.connections.find(c => c.socket.id === socket.id);
-    if (found !== -1) {
+    const connection = this.connections.find(c => c.socket.id === socket.id);
+    if (connection) {
       this.logger.log('cleaning up');
-      const connection = this.connections[found];
       connection.subscription.unsubscribe();
       this.connections = this.connections.splice(found, 1);
       // TODO: unsubscribe from capture
