@@ -11,37 +11,43 @@ import {
 import { Socket } from 'socket.io';
 import { RaspiVideoStreamService } from './raspi-video-stream/raspi-video-stream.service'
 
+// TODO: check these out
 //@WebSocketGateway(3001, { transports: ['websocket'] })
 //@WebSocketGateway(3001, { path: '/asdf' })
 @WebSocketGateway(3001)
 export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private logger: Logger = new Logger(this.constructor.name);
   
-  // TODO client service that tracks number of users
-  private clients = [];
+  // TODO client/connection service that tracks number of users
+  private connections = [];
   
   constructor(private videoStreamService: RaspiVideoStreamService) {
   }
   
   afterInit(server: any): any {
-    this.logger.log('AppGateway initialized');
+    this.logger.log(`${this.constructor.name} initialized`);
   }
   
-  handleConnection(client: Socket, ...args: any[]): any {
-    this.logger.log('connection');
-    this.clients.push(client);
-    this.videoStreamService.getCapture()
+  handleConnection(socket: Socket, ...args: any[]): any {
+    this.logger.log(`connected ${socket.id}`);
+    const observable = this.videoStreamService.getCapture()
       .subscribe(
-        data => client.emit('video-chunk', data),
-        error => client.emit('video-error', '')
+        data => socket.emit('video-chunk', data),
+        error => socket.emit('video-error', '')
       );
+    this.connections.push({ socket, observable });
   }
   
-  handleDisconnect(client: Socket): any {
-    this.logger.log('disconnect');
-    const found = this.clients.find(c => c.id === client.id);
+  handleDisconnect(socket: Socket): any {
+    socket.disconnect(true);
+    this.logger.log(`disconnected ${socket.id}`);
+    const found = this.connections.find(c => c.socket.id === socket.id);
     if (found) {
-      this.clients = this.clients.splice(found, 1);
+      const connection = this.connections[found];
+      connection.observable.unsubscribe();
+      this.connections = this.connections.splice(found, 1);
+      // TODO: unsubscribe from capture
+      // TODO: check if socket needs to be closed
     }
   }
 }
