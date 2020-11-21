@@ -36,7 +36,7 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
         error => socket.emit('video-error', '')
       );
     this.connections.push({ socket, subscription });
-    this.logger.log(this.connections);
+    this.logger.log(JSON.stringify(subscription));
   }
   
   handleDisconnect(socket: Socket): any {
