@@ -16,8 +16,7 @@ export class VideoStreamConnectionService {
       .subscribe(
         // TODO fixed size chunks
         data => socket.send(data),
-        error => socket.send('error')
-        //error => socket.close(); 
+        error => socket.close()
       );
       
     this.connections.set(socketId, { subscription, remoteAddr });

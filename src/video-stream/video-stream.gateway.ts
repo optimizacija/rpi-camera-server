@@ -33,10 +33,9 @@ export class VideoStreamGateway implements OnGatewayInit, OnGatewayConnection {
   
   handleConnection(socket: ws, args: any): any {
     const socketId = uuidv4();
-    const remoteAddr = args.connection.remoteAddress;
+    const remoteAddr = args.socket.remoteAddress;
     this.logger.log(`Received connection: ${remoteAddr} | ${socketId}`);
     this.videoStreamConnectionService.add(socketId, remoteAddr, socket);
-    console.log(args.connection);
     
     // handle disconnect here, so that we can assign ids to sockets
     socket.on('close', (code, reason) => {
