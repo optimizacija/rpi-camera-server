@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { spawn, ChildProcess } from 'child_process';
 import { Observable, Subject } from 'rxjs';
-import { RaspiVideoStreamConfig } from './raspi-video-stream-config.model';
+import { VideoStreamConfig } from './video-stream-config.model';
 
 @Injectable()
-export class RaspiVideoStreamService {
+export class VideoStreamService {
   
   private command = 'raspivid';
   private logger = new Logger(this.constructor.name);
@@ -13,7 +13,7 @@ export class RaspiVideoStreamService {
   private capSubject: Subject<string>;
   
   // TODO: support live reload, read from file etc
-  private config: RaspiVideoStreamConfig = {
+  private config: VideoStreamConfig = {
     width: 960, // px
     height: 540, // px
     profile: 'baseline'
@@ -29,6 +29,7 @@ export class RaspiVideoStreamService {
   }
   
   killCapture() {
+    this.logger.log('Killing capture process');
     this.capProcess.kill();
   }
   
@@ -37,6 +38,7 @@ export class RaspiVideoStreamService {
   }
   
   private _startCapture() {
+    this.logger.log('Starting capture process');
     this._initState();
     this._setupEvents();
   }
