@@ -64,7 +64,7 @@ export class VideoStreamService {
     // closing & exiting
     this.capProcess.on('close', code => {
       const message = `${this.command} closed all stdio with code ${code}`
-      if (code == 0) {
+      if (code === 0 || code == null) {
         if (this.isCapturing()) {
           this.logger.warn(`${message} before exiting`);
         } else {
