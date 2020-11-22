@@ -14,7 +14,6 @@ export class VideoStreamConnectionService {
   add(socketId: string, remoteAddr: string, socket: ws) {
     const subscription = this.videoStreamService.getCapture()
       .subscribe(
-        // TODO fixed size chunks
         data => socket.send(data),
         error => socket.terminate()
       );
