@@ -46,7 +46,6 @@ export class VideoStreamConnectionService {
   
   private _tryKillingVideoStream() {
     // if there's no listeners, there's no need to capture video stream
-    this.logger.debug(`connections size ${this.connections.length}`);
     if (this.connections.length === 0) {
       this.videoStreamService.killCapture();
     }
