@@ -61,6 +61,7 @@ export class VideoStreamService {
   }
   
   private _formatStdout() {
+    // shamelessly took from https://github.com/pimterry/raspivid-stream/blob/master/index.js
     const NALseparator = new Buffer([0,0,0,1]);
     
     const headerData = {
