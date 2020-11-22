@@ -35,7 +35,7 @@ export class VideoStreamConnectionService {
     if (found !== -1) {
       const connection = this.connections[found];
       connection.subscription.unsubscribe(); // TODO kill capture when no subscriptions are active
-      this.connections = this.connections.splice(found, 1);
+      this.connections.splice(found, 1);
       this.logger.log(`Removed connection ${socketToString(socket)}`);
       
       this._tryKillingVideoStream();
