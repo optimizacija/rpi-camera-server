@@ -1,46 +1,39 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { VideoStreamService } from '../video-stream.service'
-import { VideoStreamConnection } from './video-stream-connection.model'
 
-import { Socket } from 'socket.io';
-import { socketToString } from '../../misc/formatting';
+import * as ws from 'ws';
 
 @Injectable()
 export class VideoStreamConnectionService {
   
   private logger: Logger = new Logger(this.constructor.name);
-  private connections: VideoStreamConnection[] = [];
-  private messageNames = {
-    chunk: 'video-chunk',
-    error: 'video-error'
-  }
+  private connections: any = new Map();
   
   constructor(private videoStreamService: VideoStreamService) {}
   
-  add(socket: Socket) {
+  add(socketId: string, remoteAddr: string, socket: ws) {
     const subscription = this.videoStreamService.getCapture()
       .subscribe(
         // TODO fixed size chunks
-        data => socket.emit(this.messageNames.chunk, data),
-        error => socket.emit(this.messageNames.error, '')
+        data => socket.send(data),
+        error => socket.send('error')
+        //error => socket.close(); 
       );
       
-    this.connections.push({ socket, subscription });
-    this.logger.log(`Added connection ${socketToString(socket)}`);
+    this.connections.set(socketId, { subscription, remoteAddr });
+    this.logger.log(`Added connection ${remoteAddr} | ${socketId}`);
   }
   
-  remove(socket: Socket) {
-    // socket.disconnect(true); // TODO: required?
-    const found = this.connections.findIndex(c => c.socket.id === socket.id);
-    if (found !== -1) {
-      const connection = this.connections[found];
-      connection.subscription.unsubscribe();
-      this.connections.splice(found, 1);
-      this.logger.log(`Removed connection ${socketToString(socket)}`);
+  remove(socketId: string) {
+    const {subscription, remoteAddr} = this.connections.get(socketId);
+    if (subscription) {
+      subscription.unsubscribe();
+      this.connections.delete(socketId);
+      this.logger.log(`Removed connection ${remoteAddr} | ${socketId}}`);
       
       this._tryKillingVideoStream();
     } else {
-      this.logger.error(`Failed to remove connection ${socketToString(socket)}`);
+      this.logger.error(`Failed to remove connection (not found) ${remoteAddr} | ${socketId}`);
     }
   }
   
