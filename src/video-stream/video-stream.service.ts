@@ -10,7 +10,7 @@ export class VideoStreamService {
   private logger = new Logger(this.constructor.name);
   
   private capProcess: ChildProcess;
-  private capSubject: Subject<string>;
+  private capSubject: Subject<Buffer>;
   
   // TODO: support live reload, read from file etc
   private config: VideoStreamConfig = {
@@ -19,7 +19,7 @@ export class VideoStreamService {
     profile: 'baseline'
   };
   
-  getCapture(): Observable<string> {
+  getCapture(): Observable<Buffer> {
     if (this.isCapturing()) {
       return this.capSubject;
     }
@@ -44,7 +44,7 @@ export class VideoStreamService {
   }
   
   private _initState() {
-    this.capSubject = new Subject<string>(); // TODO: change type to buffer?
+    this.capSubject = new Subject<Buffer>(); // TODO: change type to buffer?
     // raspivid --width 960 --height 540 --profile 'baseline' --timeout 0 -o -
     this.capProcess = spawn(this.command, [
       '--width', `${this.config.width}`,
