@@ -38,13 +38,14 @@ export class VideoStreamConnectionService {
       this.connections = this.connections.splice(found, 1);
       this.logger.log(`Removed connection ${socketToString(socket)}`);
       
-      this._tryToKillCapture();
+      this._tryKillingVideoStream();
     } else {
       this.logger.error(`Failed to remove connection ${socketToString(socket)}`);
     }
   }
   
-  private _tryToKillCapture() {
+  private _tryKillingVideoStream() {
+    // if there's no listeners, there's no need to capture video stream
     if (this.connections.length === 0) {
       this.videoStreamService.killCapture();
     }
