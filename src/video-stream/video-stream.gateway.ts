@@ -12,10 +12,12 @@ import { Socket } from 'socket.io';
 import { VideoStreamConnectionService } from './video-stream-connection/video-stream-connection.service'
 import { socketToString } from '../misc/formatting';
 
-// TODO: check these out + namespace
-//@WebSocketGateway(3001, { transports: ['websocket'] })
-//@WebSocketGateway(3001, { path: '/asdf' })
-@WebSocketGateway(3001)
+// TODO: set path & namespace
+@WebSocketGateway(3001, {
+  serveClient: false,
+  // path: '/api/video-stream', // socket.io endpoint
+  // namespace: '/video-stream' 
+})
 export class VideoStreamGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private logger: Logger = new Logger(this.constructor.name);
   

@@ -16,7 +16,8 @@ export class VideoStreamService {
   private config: VideoStreamConfig = {
     width: 960, // px
     height: 540, // px
-    profile: 'baseline'
+    profile: 'baseline',
+    framerate: 20,
   };
   
   getCapture(): Observable<Buffer> {
@@ -44,12 +45,12 @@ export class VideoStreamService {
   }
   
   private _initState() {
-    this.capSubject = new Subject<Buffer>(); // TODO: change type to buffer?
-    // raspivid --width 960 --height 540 --profile 'baseline' --timeout 0 -o -
+    this.capSubject = new Subject<Buffer>();
     this.capProcess = spawn(this.command, [
       '--width', `${this.config.width}`,
       '--height', `${this.config.height}`,
       '--profile', `${this.config.profile}`,
+      '--framerate', `${this.config.framerate}`,
       '--timeout', '0',
       '-o', '-',
     ]);
