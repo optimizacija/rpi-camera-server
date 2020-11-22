@@ -4,6 +4,7 @@ import { Observable, Subject } from 'rxjs';
 import { VideoStreamConfig } from './video-stream-config.model';
 import * as Splitter from 'stream-split';
 import * as stream from 'stream';
+import * as StreamConcat from 'stream-concat';
 
 @Injectable()
 export class VideoStreamService {
@@ -45,6 +46,7 @@ export class VideoStreamService {
     this.logger.log('Starting capture process');
     this._initState();
     this._formatStdout();
+    
     this._setupEvents();
   }
   
@@ -96,35 +98,49 @@ export class VideoStreamService {
         }
     };
     
-    this.capProcess.stdout
-      .pipe(new Splitter(NALseparator))
-      .pipe(new stream.Transform({ transform: function (chunk, encoding, callback) {
-          const chunkWithSeparator = Buffer.concat([NALseparator, chunk]);
+    new StreamConcat([
+      headerData.getStream(), 
+      this.capProcess.stdout
+        .pipe(new Splitter(NALseparator))
+        .pipe(new stream.Transform({ transform: function (chunk, encoding, callback) {
+            const chunkWithSeparator = Buffer.concat([NALseparator, chunk]);
 
-          const chunkType = chunk[0] & 0b11111;
+            const chunkType = chunk[0] & 0b11111;
+            let chunkName = 'unknown';
 
-          // Capture the first SPS & PPS frames, so we can send stream parameters on connect.
-          if (chunkType === 7 || chunkType === 8) {
-              headerData.addParameterFrame(chunkWithSeparator);
-          } else {
-              // The live stream only includes the non-parameter chunks
-              this.push(chunkWithSeparator);
+            // Capture the first SPS & PPS frames, so we can send stream parameters on connect.
+            if (chunkType === 7 || chunkType === 8) {
+                headerData.addParameterFrame(chunkWithSeparator);
+                chunkName = chunkType === 7 ? 'SPS' : 'PPS';
+            } else {
+                // The live stream only includes the non-parameter chunks
+                this.push(chunkWithSeparator);
 
-              // Keep track of the latest IDR chunk, so we can start clients off with a near-current image
-              if (chunkType === 5) {
-                  headerData.idrFrame = chunkWithSeparator;
-              }
-          }
+                // Keep track of the latest IDR chunk, so we can start clients off with a near-current image
+                if (chunkType === 5) {
+                    chunkName = 'IDR';
+                    headerData.idrFrame = chunkWithSeparator;
+                }
+            }
+            
+            
+            if (chunkType !== 1) {
+              console.log(`${chunkName}[${chunkType}]: ${chunk.length}`);
+            }
 
-          callback();
-      }}));
+            callback();
+        }}))
+    ])
+      .on('data', data => {
+        this.capSubject.next(data);
+      });
   }
   
   private _setupEvents() {
     // receive and forward video stream
-    this.capProcess.stdout.on('data', data => {
-      this.capSubject.next(data);
-    });
+    //this.capProcess.stdout.on('data', data => {
+      //this.capSubject.next(data);
+    //});
     
     // closing & exiting
     this.capProcess.on('close', code => {

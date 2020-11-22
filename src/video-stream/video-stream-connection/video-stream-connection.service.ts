@@ -18,6 +18,12 @@ export class VideoStreamConnectionService {
         error => socket.terminate()
       );
       
+      socket.send(JSON.stringify({
+        action: 'init',
+        width: '960',
+        height: '540'
+      }), {binary: false});
+      
     this.connections.set(socketId, { subscription, remoteAddr });
     this.logger.log(`Added connection ${remoteAddr} | ${socketId}`);
   }
