@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { VideoStreamService } from '../video-stream.service'
 
 import * as ws from 'ws';
-import { concat } from 'rxjs';
 
 @Injectable()
 export class VideoStreamConnectionService {

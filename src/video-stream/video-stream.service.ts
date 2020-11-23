@@ -1,12 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { spawn, ChildProcess } from 'child_process';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, ReplaySubject } from 'rxjs';
 import { VideoStreamConfig } from './video-stream-config.model';
 import * as stream from 'stream';
 import * as StreamSplit from 'stream-split';
 import { of, concat } from 'rxjs';
 
 // TODO: separate file
+// Packet from data ( default binary = true )
 interface Packet {
   data: Buffer | string;
   binary: boolean;
@@ -29,6 +30,7 @@ export class VideoStreamService {
   private capProcess: ChildProcess;
   private capSubject: Subject<Packet>;
   private capState: CapState = { lastIdrFrame: undefined, sps: undefined, pps: undefined};
+  private capInitialStateSubject: ReplaySubject<Packet>;
   
   // TODO: support live reload, read from file etc
   private config: VideoStreamConfig = {
@@ -72,44 +74,63 @@ export class VideoStreamService {
       '--timeout', '0',
       '-o', '-',
     ]);
+    this.capInitialStateSubject = new ReplaySubject<Packet>();
   }
   
   private _setupStream() {
-    // shamelessly took from https://github.com/pimterry/raspivid-stream/blob/master/index.js
-    const NALseparator = new Buffer([0,0,0,1]);
-    const refCapState = this.capState;
+    const NalSeparator = new Buffer([0,0,0,1]);
+    const self = this;
   
     this.capProcess.stdout
-      .pipe(new StreamSplit(NALseparator))
+      .pipe(new StreamSplit(NalSeparator))
       .pipe(new stream.Transform({ transform: function (chunk, encoding, callback) {
-          const completeChunk = Buffer.concat([NALseparator, chunk]);
-
+          const completeChunk = Buffer.concat([NalSeparator, chunk]);
           const chunkType = chunk[0] & 0b11111;
-          let chunkName = 'unknown';
 
           switch(chunkType) {
             case 7: // SPS
-              refCapState.sps = completeChunk;
+              if (!self.capState.sps) {
+                self._updateInitialState(completeChunk);
+              }
+              self.capState.sps = completeChunk;
               break;
             case 8: // PPS
-              refCapState.pps = completeChunk;
+              if (!self.capState.pps) {
+                self._updateInitialState(completeChunk);
+              }
+              self.capState.pps = completeChunk;
               break;
             case 5: // IDR
-              refCapState.lastIdrFrame = completeChunk;
+              if (!self.capState.lastIdrFrame) {
+                self._updateInitialState(completeChunk);
+              }
+              self.capState.lastIdrFrame = completeChunk;
               // @Fallthrough
             default:
               this.push(completeChunk);
           }
-                    
-          // TODO: remove
-          if (chunkType !== 1) {
-            console.log(`${chunkName}[${chunkType}]: ${chunk.length}`);
-          }
+          
+          self._tryCompleteInitialState();
 
           callback();
       }})).on('data', data => {
         this.capSubject.next({ data, binary: true });
       });
+  }
+  
+  private _updateInitialState(chunk) {
+    if (this.capInitialStateSubject !== undefined) {
+      this.capInitialStateSubject.next({ data: chunk, binary: true });
+    }
+  }
+  
+  private _tryCompleteInitialState() {
+    if (this.capInitialStateSubject !== undefined &&
+        Object.values(this.capState).every(val => val != undefined)) {
+      console.log('CALLING COMPLETE'); // TODO: debug
+      this.capInitialStateSubject.complete();
+      this.capInitialStateSubject = undefined;
+    }
   }
   
   private _setupEvents() {
@@ -148,30 +169,31 @@ export class VideoStreamService {
   private _cleanup() {
     this.capProcess = undefined;
     this.capSubject = undefined;
+    this.capInitialStateSubject = undefined;
   }
   
   private _getStreamHeader(): Observable<Packet> {
-    return of(
-      { 
-        data: JSON.stringify({
-          action: 'init',
-          width: this.config.width,
-          height: this.config.height
-        }),
-        binary: false
-      },
-      {
-        data: this.capState.sps, 
-        binary: true
-      },
-      {
-        data: this.capState.pps, 
-        binary: true
-      },
-      {
-        data: this.capState.lastIdrFrame, 
-        binary: true
-      }
-    );
+    const staticHeader: Packet = { 
+          data: JSON.stringify({
+            action: 'init',
+            width: this.config.width,
+            height: this.config.height
+          }),
+          binary: false
+        };
+        
+    return concat(of(staticHeader), 
+                  this.capInitialStateSubject ?
+                    this.capInitialStateSubject :
+                    of({
+                        data: this.capState.sps, 
+                        binary: true
+                      }, {
+                        data: this.capState.pps, 
+                        binary: true
+                      }, {
+                        data: this.capState.lastIdrFrame, 
+                        binary: true
+                      }));
   }
 }
