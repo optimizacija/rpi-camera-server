@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { VideoStreamService } from '../video-stream.service'
 
 import * as ws from 'ws';
+import { concat } from 'rxjs';
 
 @Injectable()
 export class VideoStreamConnectionService {
@@ -14,15 +15,9 @@ export class VideoStreamConnectionService {
   add(socketId: string, remoteAddr: string, socket: ws) {
     const subscription = this.videoStreamService.getCapture()
       .subscribe(
-        data => socket.send(data),
+        data => socket.send(data.data, { binary: data.binary }),
         error => socket.terminate()
       );
-      
-      socket.send(JSON.stringify({
-        action: 'init',
-        width: '960',
-        height: '540'
-      }), {binary: false});
       
     this.connections.set(socketId, { subscription, remoteAddr });
     this.logger.log(`Added connection ${remoteAddr} | ${socketId}`);

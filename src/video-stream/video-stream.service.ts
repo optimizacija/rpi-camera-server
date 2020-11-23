@@ -5,6 +5,12 @@ import { VideoStreamConfig } from './video-stream-config.model';
 import * as Splitter from 'stream-split';
 import * as stream from 'stream';
 import * as StreamConcat from 'stream-concat';
+import { of, concat } from 'rxjs';
+
+interface Packet {
+  data: Buffer | string;
+  binary: boolean;
+}
 
 @Injectable()
 export class VideoStreamService {
@@ -14,7 +20,7 @@ export class VideoStreamService {
   private logger = new Logger(this.constructor.name);
   
   private capProcess: ChildProcess;
-  private capSubject: Subject<Buffer>;
+  private capSubject: Subject<Packet>;
   
   // TODO: support live reload, read from file etc
   private config: VideoStreamConfig = {
@@ -24,13 +30,12 @@ export class VideoStreamService {
     framerate: 20,
   };
   
-  getCapture(): Observable<Buffer> {
-    if (this.isCapturing()) {
-      return this.capSubject;
+  getCapture(): Observable<Packet> {
+    if (!this.isCapturing()) {
+      this._startCapture();
     }
     
-    this._startCapture();
-    return this.capSubject;
+    return concat(this._getStreamHeader(), this.capSubject);
   }
   
   killCapture() {
@@ -51,7 +56,7 @@ export class VideoStreamService {
   }
   
   private _initState() {
-    this.capSubject = new Subject<Buffer>();
+    this.capSubject = new Subject<Packet>();
     this.capProcess = spawn(this.command, [
       '--width', `${this.config.width}`,
       '--height', `${this.config.height}`,
@@ -132,7 +137,7 @@ export class VideoStreamService {
         }}))
     ])
       .on('data', data => {
-        this.capSubject.next(data);
+        this.capSubject.next({ data, binary: true });
       });
   }
   
@@ -177,5 +182,16 @@ export class VideoStreamService {
   private _cleanup() {
     this.capProcess = undefined;
     this.capSubject = undefined;
+  }
+  
+  private _getStreamHeader(): Observable<Packet> {
+      return of({ 
+        data: JSON.stringify({
+          action: 'init',
+          width: this.config.width,
+          height: this.config.height
+        }),
+        binary: false
+      });
   }
 }
