@@ -13,7 +13,7 @@ interface Packet {
   binary: boolean;
 }
 
-interface CapState {
+interface capHeader {
   lastIdrFrame: Buffer;
   sps: Buffer;
   pps: Buffer;
@@ -29,8 +29,8 @@ export class VideoStreamService {
   // capture
   private capProcess: ChildProcess;
   private capSubject: Subject<Packet>;
-  private capState: CapState = { lastIdrFrame: undefined, sps: undefined, pps: undefined};
-  private capInitialStateSubject: ReplaySubject<Packet>;
+  private capHeader: capHeader = { lastIdrFrame: undefined, sps: undefined, pps: undefined};
+  private capStartingHeaderSubject: ReplaySubject<Packet>;
   
   // TODO: support live reload, read from file etc
   private config: VideoStreamConfig = {
@@ -78,7 +78,7 @@ export class VideoStreamService {
       '--timeout', '0',
       '-o', '-',
     ]);
-    this.capInitialStateSubject = new ReplaySubject<Packet>();
+    this.capStartingHeaderSubject = new ReplaySubject<Packet>();
   }
   
   private _setupStream() {
@@ -93,22 +93,22 @@ export class VideoStreamService {
 
           switch(chunkType) {
             case 7: // SPS
-              if (!self.capState.sps) {
+              if (!self.capHeader.sps) {
                 self._updateInitialState(completeChunk);
               }
-              self.capState.sps = completeChunk;
+              self.capHeader.sps = completeChunk;
               break;
             case 8: // PPS
-              if (!self.capState.pps) {
+              if (!self.capHeader.pps) {
                 self._updateInitialState(completeChunk);
               }
-              self.capState.pps = completeChunk;
+              self.capHeader.pps = completeChunk;
               break;
             case 5: // IDR
-              if (!self.capState.lastIdrFrame) {
+              if (!self.capHeader.lastIdrFrame) {
                 self._updateInitialState(completeChunk);
               }
-              self.capState.lastIdrFrame = completeChunk;
+              self.capHeader.lastIdrFrame = completeChunk;
               // @Fallthrough
             default:
               this.push(completeChunk);
@@ -123,16 +123,16 @@ export class VideoStreamService {
   }
   
   private _updateInitialState(chunk) {
-    if (this.capInitialStateSubject !== undefined) {
-      this.capInitialStateSubject.next({ data: chunk, binary: true });
+    if (this.capStartingHeaderSubject !== undefined) {
+      this.capStartingHeaderSubject.next({ data: chunk, binary: true });
     }
   }
   
   private _tryCompleteInitialState() {
-    if (this.capInitialStateSubject !== undefined &&
-        Object.values(this.capState).every(val => val != undefined)) {
-      this.capInitialStateSubject.complete();
-      this.capInitialStateSubject = undefined;
+    if (this.capStartingHeaderSubject !== undefined &&
+        Object.values(this.capHeader).every(val => val != undefined)) {
+      this.capStartingHeaderSubject.complete();
+      this.capStartingHeaderSubject = undefined;
     }
   }
   
@@ -172,8 +172,8 @@ export class VideoStreamService {
   private _cleanup() {
     this.capProcess = undefined;
     this.capSubject = undefined;
-    this.capState = { lastIdrFrame: undefined, sps: undefined, pps: undefined};
-    this.capInitialStateSubject = undefined;
+    this.capHeader = { lastIdrFrame: undefined, sps: undefined, pps: undefined};
+    this.capStartingHeaderSubject = undefined;
   }
   
   private _getStreamHeader(): Observable<Packet> {
@@ -187,16 +187,16 @@ export class VideoStreamService {
         };
         
     return concat(of(staticHeader), 
-                  this.capInitialStateSubject ?
-                    this.capInitialStateSubject :
+                  this.capStartingHeaderSubject ?
+                    this.capStartingHeaderSubject :
                     of({
-                        data: this.capState.sps, 
+                        data: this.capHeader.sps, 
                         binary: true
                       }, {
-                        data: this.capState.pps, 
+                        data: this.capHeader.pps, 
                         binary: true
                       }, {
-                        data: this.capState.lastIdrFrame, 
+                        data: this.capHeader.lastIdrFrame, 
                         binary: true
                       }));
   }
