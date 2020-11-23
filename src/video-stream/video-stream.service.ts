@@ -2,14 +2,20 @@ import { Injectable, Logger } from '@nestjs/common';
 import { spawn, ChildProcess } from 'child_process';
 import { Observable, Subject } from 'rxjs';
 import { VideoStreamConfig } from './video-stream-config.model';
-import * as Splitter from 'stream-split';
 import * as stream from 'stream';
-import * as StreamConcat from 'stream-concat';
+import * as StreamSplit from 'stream-split';
 import { of, concat } from 'rxjs';
 
+// TODO: separate file
 interface Packet {
   data: Buffer | string;
   binary: boolean;
+}
+
+interface CapState {
+  lastIdrFrame: Buffer;
+  sps: Buffer;
+  pps: Buffer;
 }
 
 @Injectable()
@@ -19,8 +25,10 @@ export class VideoStreamService {
   private command = 'raspivid';
   private logger = new Logger(this.constructor.name);
   
+  // capture
   private capProcess: ChildProcess;
   private capSubject: Subject<Packet>;
+  private capState: CapState = { lastIdrFrame: undefined, sps: undefined, pps: undefined};
   
   // TODO: support live reload, read from file etc
   private config: VideoStreamConfig = {
@@ -50,9 +58,8 @@ export class VideoStreamService {
   private _startCapture() {
     this.logger.log('Starting capture process');
     this._initState();
-    this._formatStdout();
-    
     this._setupEvents();
+    this._setupStream();
   }
   
   private _initState() {
@@ -67,86 +74,45 @@ export class VideoStreamService {
     ]);
   }
   
-  private _formatStdout() {
+  private _setupStream() {
     // shamelessly took from https://github.com/pimterry/raspivid-stream/blob/master/index.js
     const NALseparator = new Buffer([0,0,0,1]);
-    
-    const headerData = {
-        _waitingStream: new stream.PassThrough(),
-        _firstFrames: [],
-        _lastIdrFrame: null,
+    const refCapState = this.capState;
+  
+    this.capProcess.stdout
+      .pipe(new StreamSplit(NALseparator))
+      .pipe(new stream.Transform({ transform: function (chunk, encoding, callback) {
+          const completeChunk = Buffer.concat([NALseparator, chunk]);
 
-        set idrFrame(frame) {
-            this._lastIdrFrame = frame;
+          const chunkType = chunk[0] & 0b11111;
+          let chunkName = 'unknown';
 
-            if (this._waitingStream) {
-                const waitingStream = this._waitingStream;
-                this._waitingStream = null;
-                this.getStream().pipe(waitingStream);
-            }
-        },
+          switch(chunkType) {
+            case 7: // SPS
+              refCapState.sps = completeChunk;
+              break;
+            case 8: // PPS
+              refCapState.pps = completeChunk;
+              break;
+            case 5: // IDR
+              refCapState.lastIdrFrame = completeChunk;
+              // @Fallthrough
+            default:
+              this.push(completeChunk);
+          }
+                    
+          // TODO: remove
+          if (chunkType !== 1) {
+            console.log(`${chunkName}[${chunkType}]: ${chunk.length}`);
+          }
 
-        addParameterFrame: function (frame) {
-            this._firstFrames.push(frame)
-        },
-
-        getStream: function () {
-            if (this._waitingStream) {
-                return this._waitingStream;
-            } else {
-                const headersStream = new stream.PassThrough();
-                this._firstFrames.forEach((frame) => headersStream.push(frame));
-                headersStream.push(this._lastIdrFrame);
-                headersStream.end();
-                return headersStream;
-            }
-        }
-    };
-    
-    new StreamConcat([
-      headerData.getStream(), 
-      this.capProcess.stdout
-        .pipe(new Splitter(NALseparator))
-        .pipe(new stream.Transform({ transform: function (chunk, encoding, callback) {
-            const chunkWithSeparator = Buffer.concat([NALseparator, chunk]);
-
-            const chunkType = chunk[0] & 0b11111;
-            let chunkName = 'unknown';
-
-            // Capture the first SPS & PPS frames, so we can send stream parameters on connect.
-            if (chunkType === 7 || chunkType === 8) {
-                headerData.addParameterFrame(chunkWithSeparator);
-                chunkName = chunkType === 7 ? 'SPS' : 'PPS';
-            } else {
-                // The live stream only includes the non-parameter chunks
-                this.push(chunkWithSeparator);
-
-                // Keep track of the latest IDR chunk, so we can start clients off with a near-current image
-                if (chunkType === 5) {
-                    chunkName = 'IDR';
-                    headerData.idrFrame = chunkWithSeparator;
-                }
-            }
-            
-            
-            if (chunkType !== 1) {
-              console.log(`${chunkName}[${chunkType}]: ${chunk.length}`);
-            }
-
-            callback();
-        }}))
-    ])
-      .on('data', data => {
+          callback();
+      }})).on('data', data => {
         this.capSubject.next({ data, binary: true });
       });
   }
   
   private _setupEvents() {
-    // receive and forward video stream
-    //this.capProcess.stdout.on('data', data => {
-      //this.capSubject.next(data);
-    //});
-    
     // closing & exiting
     this.capProcess.on('close', code => {
       const message = `${this.command} closed all stdio with code ${code}`
@@ -185,13 +151,27 @@ export class VideoStreamService {
   }
   
   private _getStreamHeader(): Observable<Packet> {
-      return of({ 
+    return of(
+      { 
         data: JSON.stringify({
           action: 'init',
           width: this.config.width,
           height: this.config.height
         }),
         binary: false
-      });
+      },
+      {
+        data: this.capState.sps, 
+        binary: true
+      },
+      {
+        data: this.capState.pps, 
+        binary: true
+      },
+      {
+        data: this.capState.lastIdrFrame, 
+        binary: true
+      }
+    );
   }
 }
