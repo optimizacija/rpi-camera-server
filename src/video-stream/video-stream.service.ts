@@ -50,7 +50,11 @@ export class VideoStreamService {
   
   killCapture() {
     this.logger.log('Killing capture process');
-    this.capProcess.kill();
+    if (this.capProcess) {
+      this.capProcess.kill();
+    } else {
+      this.logger.log('Capture process is already stopped');
+    }
   }
   
   isCapturing(): boolean {
@@ -127,7 +131,6 @@ export class VideoStreamService {
   private _tryCompleteInitialState() {
     if (this.capInitialStateSubject !== undefined &&
         Object.values(this.capState).every(val => val != undefined)) {
-      console.log('CALLING COMPLETE'); // TODO: debug
       this.capInitialStateSubject.complete();
       this.capInitialStateSubject = undefined;
     }
@@ -169,6 +172,7 @@ export class VideoStreamService {
   private _cleanup() {
     this.capProcess = undefined;
     this.capSubject = undefined;
+    this.capState = { lastIdrFrame: undefined, sps: undefined, pps: undefined};
     this.capInitialStateSubject = undefined;
   }
   
