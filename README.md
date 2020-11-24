@@ -1,7 +1,7 @@
 # RaspberryPi Camera Server
 
 RaspberryPi Camera Server provides a stable multicast video streaming service functionality over WebSocket protocol.
-It's built around the `raspivid` terminal command and partially based on these two awesome projects:
+It's built around the [raspivid](https://www.raspberrypi.org/documentation/usage/camera/raspicam/raspivid.md) terminal command and partially based on these two awesome projects:
 [raspivid](https://github.com/pimterry/raspivid-stream), [raspivid](https://github.com/binocarlos/raspivid).
 
 ## Framework
