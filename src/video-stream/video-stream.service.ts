@@ -13,7 +13,7 @@ interface Packet {
   binary: boolean;
 }
 
-interface capHeader {
+interface CapHeader {
   lastIdrFrame: Buffer;
   sps: Buffer;
   pps: Buffer;
@@ -29,15 +29,16 @@ export class VideoStreamService {
   // capture
   private capProcess: ChildProcess;
   private capSubject: Subject<Packet>;
-  private capHeader: capHeader = { lastIdrFrame: undefined, sps: undefined, pps: undefined};
+  private capHeader: CapHeader = { lastIdrFrame: undefined, sps: undefined, pps: undefined};
   private capStartingHeaderSubject: ReplaySubject<Packet>;
   
   // TODO: support live reload, read from file etc
   private config: VideoStreamConfig = {
-    width: 960, // px
-    height: 540, // px
+    // width & height for mode 4 https://picamera.readthedocs.io/en/release-1.12/fov.html
+    width: 1640, // px
+    height: 1232, // px
     profile: 'baseline',
-    framerate: 20,
+    framerate: 24,
   };
   
   getCapture(): Observable<Packet> {
@@ -82,7 +83,7 @@ export class VideoStreamService {
   }
   
   private _setupStream() {
-    const NalSeparator = new Buffer([0,0,0,1]);
+    const NalSeparator = Buffer.from([0,0,0,1]);
     const self = this;
   
     this.capProcess.stdout

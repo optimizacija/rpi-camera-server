@@ -9,13 +9,11 @@ import {
   WebSocketServer
 } from '@nestjs/websockets';
 
-//import { Server } from 'ws';
 import * as ws from 'ws';
 import { VideoStreamConnectionService } from './video-stream-connection/video-stream-connection.service'
 import { v4 as uuidv4 } from 'uuid';
 
 @WebSocketGateway(3001, {
-  serveClient: true,
   path: '/api/video-stream'
 })
 export class VideoStreamGateway implements OnGatewayInit, OnGatewayConnection {
