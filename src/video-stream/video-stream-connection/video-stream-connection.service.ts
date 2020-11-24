@@ -14,8 +14,7 @@ export class VideoStreamConnectionService {
   add(socketId: string, remoteAddr: string, socket: ws) {
     const subscription = this.videoStreamService.getCapture()
       .subscribe(
-        // TODO fixed size chunks
-        data => socket.send(data),
+        data => socket.send(data.data, { binary: data.binary }),
         error => socket.terminate()
       );
       
@@ -38,7 +37,7 @@ export class VideoStreamConnectionService {
   
   private _tryKillingVideoStream() {
     // if there's no listeners, there's no need to capture video stream
-    if (this.connections.length === 0) {
+    if (this.connections.size === 0) {
       this.videoStreamService.killCapture();
     }
   }

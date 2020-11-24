@@ -15,7 +15,7 @@ import { VideoStreamConnectionService } from './video-stream-connection/video-st
 import { v4 as uuidv4 } from 'uuid';
 
 @WebSocketGateway(3001, {
-  serveClient: false,
+  serveClient: true,
   path: '/api/video-stream'
 })
 export class VideoStreamGateway implements OnGatewayInit, OnGatewayConnection {
