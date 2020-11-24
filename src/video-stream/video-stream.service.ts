@@ -35,8 +35,8 @@ export class VideoStreamService {
   // TODO: support live reload, read from file etc
   private config: VideoStreamConfig = {
     // width & height for mode 4 https://picamera.readthedocs.io/en/release-1.12/fov.html
-    width: 1640, // px
-    height: 1232, // px
+    width: 960, // px
+    height: 720, // px
     profile: 'baseline',
     framerate: 24,
   };
