@@ -186,6 +186,7 @@ export class VideoStreamService {
           }),
           binary: false
         };
+    console.log('header', staticHeader);
         
     return concat(of(staticHeader), 
                   this.capStartingHeaderSubject ?
