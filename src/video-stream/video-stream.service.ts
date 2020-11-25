@@ -21,11 +21,11 @@ interface CapHeader {
 
 @Injectable()
 export class VideoStreamService {
-  
+
   // general
   private command = 'raspivid';
   private logger = new Logger(this.constructor.name);
-  
+
   // capture
   private capProcess: ChildProcess;
   private capSubject: Subject<Packet>;
