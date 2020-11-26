@@ -26,6 +26,8 @@ ws://<IP>:3001/api/video-stream
 ```
 
 Example Web client: 
+
+_index.html_
 ``` html
 <!DOCTYPE HTML>
 <html>
@@ -45,6 +47,33 @@ Example Web client:
     </script> 
 
 </html>
+```
+
+_styles.css_
+``` css
+html, body {
+    background: #111;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+canvas {
+    background: black;
+    width: 800px;
+    height: 600px;
+    /*width: 1640px;*/
+    /*height: 1232px;*/
+    vertical-align: center;
+}
 ```
 
 ## Misc
