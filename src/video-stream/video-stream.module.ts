@@ -7,7 +7,7 @@ import { VideoStreamConnectionService } from './video-stream-connection/video-st
   providers: [
     VideoStreamGateway,
     VideoStreamService,
-    VideoStreamConnectionService
-  ]
+    VideoStreamConnectionService,
+  ],
 })
 export class VideoStreamModule {}
