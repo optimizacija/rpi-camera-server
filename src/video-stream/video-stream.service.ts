@@ -210,10 +210,10 @@ export class VideoStreamService {
       binary: false,
     };
 
-    return concat(
+    return <any>concat(
       of(staticHeader),
       this.capStartingHeaderSubject
-        ? this.capStartingHeaderSubject
+        ? <any>this.capStartingHeaderSubject
         : of(
             {
               data: this.capHeader.sps,
